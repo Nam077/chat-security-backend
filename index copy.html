@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <style>
+        .chat-container {
+            width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .message-box {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            padding: 10px;
+        }
+
+        .input-box {
+            display: flex;
+            margin-bottom: 10px;
+        }
+
+        .input-box input {
+            flex-grow: 1;
+            padding: 10px;
+        }
+
+        .input-box button {
+            padding: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="chat-container">
+        <div class="message-box" id="messageBox"></div>
+        <div class="input-box">
+            <input type="text" id="messageInput" placeholder="Type a message..." />
+            <button onclick="sendMessage()">Send</button>
+        </div>
+        <div class="input-box">
+            <button onclick="joinRoom()">Join Room</button>
+        </div>
+    </div>
+
+    <!-- Sử dụng CDN cho Socket.io Client -->
+    <script src="https://cdn.socket.io/4.0.1/socket.io.min.js"></script>
+    <script>
+        const userId = 2; // Giả định đây là userId của người dùng
+        const socket = io('http://localhost:3000', {
+            query: { userId } // Gửi userId qua query khi kết nối
+        });
+
+        const messageBox = document.getElementById('messageBox');
+        const messageInput = document.getElementById('messageInput');
+
+        socket.on('message', (data) => {
+            const { userId, content, timestamp } = data;
+            const message = document.createElement('div');
+            message.textContent = `${userId}: ${content} (${new Date(timestamp).toLocaleTimeString()})`;
+            messageBox.appendChild(message);
+            messageBox.scrollTop = messageBox.scrollHeight;
+        });
+
+        function sendMessage() {
+            const content = messageInput.value.trim();
+            if (content) {
+                const type = 'single'; // Có thể 'group' hoặc 'single'
+                const userReceiveId = 1; // ID của người nhận tin nhắn (dùng cho phòng 1:1)
+
+                const messageData = {
+                    userId,
+                    content,
+                    // roomId: 1,
+                    type,
+                    userReceiveId, // chỉ dùng khi type là 'single'
+                };
+
+                socket.emit('send_message', messageData);
+                messageInput.value = '';
+            }
+        }
+
+        function joinRoom() {
+            socket.emit('join_room', { roomId: 1, userId });
+        }
+
+        socket.on('connect', () => {
+            console.log('Client connected');
+            socket.emit('join_room', { roomId: 1, userId });
+        });
+    </script>
+</body>
+
+</html>
